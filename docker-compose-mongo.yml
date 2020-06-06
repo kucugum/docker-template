@@ -129,6 +129,7 @@ services:
     networks:
       - private
 
+
   mongo:
     image: 'mongo:latest'
     container_name: "${APP_NAME}_mongo"
@@ -138,7 +139,10 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
       - ./data/mongodb/data:/data/db:cached
+    ports:
+      - 27017:27017
     networks:
+      - public
       - private
 
   me:
@@ -149,13 +153,20 @@ services:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: ${MYSQL_ROOT_PASSWORD}
       ME_CONFIG_OPTIONS_EDITORTHEME: 'ambiance'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=public"
+      - "traefik.frontend.rule=${APP_NAME}-me"
+      - "traefik.port=80"
+      # WEB 
+      - "traefik.http.services.${APP_NAME}-me.loadbalancer.server.port=8081"
+      - "traefik.http.routers.${APP_NAME}-me.rule=Host(`me.${DOMAIN}`)"
+      - "traefik.http.routers.${APP_NAME}-me.tls=false"
     networks: 
       - public
       - private
-    labels:
-      - "traefik.http.services.${APP_NAME}-me.loadbalancer.server.port=80"
-      - "traefik.docker.network=public"
-      - "traefik.http.routers.${APP_NAME}-me.rule=Host(`me.${DOMAIN}`)"
+    depends_on:
+      - mongo
 
   rabbitmq:
     image: rabbitmq:3.7.5-management
