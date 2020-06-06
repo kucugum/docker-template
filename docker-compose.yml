@@ -1,0 +1,142 @@
+version: "3.7"
+
+services:
+  php:
+    build:
+      context: ./
+      dockerfile: docker/php/Dockerfile
+      args:
+        TIMEZONE: ${TIMEZONE}
+        PHP_VERSION: ${PHP_VERSION}
+        NODE_VERSION: ${NODE_VERSION}
+        APP_GROUP_NAME: ${APP_GROUP_NAME}
+        APP_GROUP_ID: ${APP_GROUP_ID}
+        PHP_SOCKET_DIR: ${PHP_SOCKET_DIR}
+        PHP_SOCKET_FILE: ${PHP_SOCKET_FILE}
+    container_name: "${APP_NAME}_php"
+    restart: always
+    volumes:
+      - ./app:${APP_CODE_DIR}
+      - socket:${PHP_SOCKET_DIR}
+      - ./.docker/php/custom.ini:/usr/local/etc/php/conf.d/custom.ini
+    labels:
+      - "traefik.enable=false"
+    networks:
+      - nginx
+      - private
+ 
+  nginx:
+    build:
+      context: ./
+      dockerfile: docker/nginx/Dockerfile
+      args:
+        DOMAIN: ${DOMAIN}
+        FRONTEND_NGINX_PORT: ${FRONTEND_NGINX_PORT}
+        BACKEND_NGINX_PORT: ${BACKEND_NGINX_PORT}
+        NGINX_CODE_DIR: ${NGINX_CODE_DIR}
+        APP_GROUP_NAME: ${APP_GROUP_NAME}
+        APP_GROUP_ID: ${APP_GROUP_ID}
+        PHP_SOCKET_DIR: ${PHP_SOCKET_DIR}
+        PHP_SOCKET_FILE: ${PHP_SOCKET_FILE}
+    container_name: "${APP_NAME}_nginx"
+    restart: always
+    volumes:
+      - socket:${PHP_SOCKET_DIR}
+      - ./data/logs/:/var/log/nginx
+      - ./docker/nginx/ssl/${DOMAIN}.crt:/etc/nginx/ssl/${DOMAIN}.crt
+      - ./docker/nginx/ssl/${DOMAIN}.key:/etc/nginx/ssl/${DOMAIN}.key
+    depends_on:
+      - php
+    expose:
+      - ${FRONTEND_NGINX_PORT}
+      - ${BACKEND_NGINX_PORT}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=public"
+      - "traefik.frontend.rule=${APP_NAME}"
+      - "traefik.port=80"
+      # WEB
+      - "traefik.http.services.${APP_NAME}.loadbalancer.server.port=80"
+      - "traefik.http.routers.${APP_NAME}.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.${APP_NAME}.entrypoints=web"
+      - "traefik.http.routers.${APP_NAME}.tls=false"
+      # WEB SECURE
+      - "traefik.tcp.routers.${APP_NAME}.entrypoints=websecure"
+      - "traefik.tcp.routers.${APP_NAME}.rule=HostSNI(`${DOMAIN}`)"
+      - "traefik.tcp.routers.${APP_NAME}.service=${APP_NAME}"
+      - "traefik.tcp.routers.${APP_NAME}.tls.DOMAINs[0].main=${DOMAIN}"
+      - "traefik.tcp.routers.${APP_NAME}.tls=true"
+      - "traefik.tcp.routers.${APP_NAME}.tls.passthrough=true"
+      - "traefik.tcp.services.${APP_NAME}.loadbalancer.server.port=443"
+    networks:
+      - nginx
+      - public
+      - private
+
+  db:
+    image: mariadb:latest
+    container_name: ${APP_NAME}_db
+    restart: always
+    volumes:
+      - ./data/mariadb:/var/lib/mysql:delegated
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    labels:
+      - "traefik.enable=false"
+    networks:
+      - private
+  
+  pma:
+    image: phpmyadmin/phpmyadmin
+    container_name: ${APP_NAME}_pma
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=${APP_NAME}_db
+      #- PMA_USER=${MYSQL_USER}
+      - PMA_USER=root
+      - PMA_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      #- PMA_PASSWORD=${MYSQL_PASSWORD}
+      - UPLOAD_LIMIT=1G
+    restart: always
+    volumes:
+      - ./docker/phpmyadmin/custom.ini:/usr/local/etc/php/conf.d/custom.ini
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=public"
+      - "traefik.frontend.rule=${APP_NAME}-pma"
+      - "traefik.port=8080"
+      # WEB 
+      - "traefik.http.services.${APP_NAME}-pma.loadbalancer.server.port=80"
+      - "traefik.http.routers.${APP_NAME}-pma.rule=Host(`pma.${DOMAIN}`)"
+      - "traefik.http.routers.${APP_NAME}-pma.entrypoints=web"
+      - "traefik.http.routers.${APP_NAME}-pma.tls=false"
+    networks:
+      - public
+      - private
+
+  redis:
+    image: redis:latest
+    command: ["redis-server", "--appendonly", "yes"]
+    container_name: "${APP_NAME}_redis"
+    restart: always
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    labels:
+      - "traefik.enable=false"
+    networks:
+      - private
+
+networks:
+  public:
+    external: true
+  nginx:
+    external: true
+  private:
+    internal: true
+
+volumes:
+  socket:
+    driver: local

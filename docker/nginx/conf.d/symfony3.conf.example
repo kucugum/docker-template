@@ -1,0 +1,49 @@
+upstream fpm {
+    #server host.docker.internal:9000;
+    server unix://{{ .Env.PHP_SOCKET_DIR }}/{{ .Env.PHP_SOCKET_FILE }};
+}
+
+server {
+
+    listen {{ .Env.FRONTEND_NGINX_PORT }};
+    server_tokens off;
+    
+    server_name {{ .Env.DOMAIN }};
+    index index.php index.html index.htm;
+
+    root {{ .Env.NGINX_CODE_DIR }};
+
+    # For https
+    listen 443 ssl;
+    listen [::]:443 ssl ipv6only=on;
+    ssl_certificate /etc/nginx/ssl/{{ .Env.DOMAIN }}.crt;
+    ssl_certificate_key /etc/nginx/ssl/{{ .Env.DOMAIN }}.key;
+  
+    location / {
+      try_files $uri @rewriteapp;
+    }
+
+    # For Symfony 3
+    location @rewriteapp {
+        rewrite ^(.*)$ /app.php/$1 last;
+    }
+    
+    # For Symfony 4 config
+    # location @rewriteapp {
+    #     rewrite ^(.*)$ /index.php/$1 last;
+    # }
+
+    location ~ ^/(app|app_dev|config|index)\.php(/|$) {
+        fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+        fastcgi_pass fpm;
+        #fastcgi_index index.php;
+        # include the fastcgi_param settings
+        include fastcgi.params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+        fastcgi_param HTTPS off;
+    }
+  
+    error_log /var/log/nginx/app_error.log;
+    access_log /var/log/nginx/app_access.log;
+}
