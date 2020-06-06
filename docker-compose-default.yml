@@ -42,6 +42,7 @@ services:
     restart: always
     volumes:
       - socket:${PHP_SOCKET_DIR}
+      - ./app:${APP_CODE_DIR}:delegated
       - ./data/logs/:/var/log/nginx
       - ./docker/nginx/ssl/${DOMAIN}.crt:/etc/nginx/ssl/${DOMAIN}.crt
       - ./docker/nginx/ssl/${DOMAIN}.key:/etc/nginx/ssl/${DOMAIN}.key
