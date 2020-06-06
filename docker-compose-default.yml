@@ -18,7 +18,7 @@ services:
     volumes:
       - ./app:${APP_CODE_DIR}
       - socket:${PHP_SOCKET_DIR}
-      - ./docker/php/custom.ini:/usr/local/etc/php/conf.d/custom.ini
+      - ./docker/php/custom.ini:/usr/local/etc/php/conf.d/custom.ini:cached
     labels:
       - "traefik.enable=false"
     networks:
@@ -102,7 +102,7 @@ services:
       - UPLOAD_LIMIT=1G
     restart: always
     volumes:
-      - ./docker/phpmyadmin/custom.ini:/usr/local/etc/php/conf.d/custom.ini
+      - ./docker/phpmyadmin/custom.ini:/usr/local/etc/php/conf.d/custom.ini:cached
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=public"

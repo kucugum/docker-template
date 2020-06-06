@@ -18,7 +18,7 @@ services:
     volumes:
       - ./app:${APP_CODE_DIR}
       - socket:${PHP_SOCKET_DIR}
-      - ./docker/php/custom.ini:/usr/local/etc/php/conf.d/custom.ini
+      - ./docker/php/custom.ini:/usr/local/etc/php/conf.d/custom.ini:cached
     labels:
       - "traefik.enable=false"
     networks:
