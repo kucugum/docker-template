@@ -138,7 +138,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
-      - ./data/mongodb/data:/data/db:cached
+      - ./data/mongodb/data:/data/db:delegated
     ports:
       - 27017:27017
     networks:
