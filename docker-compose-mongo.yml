@@ -38,7 +38,7 @@ services:
         APP_GROUP_ID: ${APP_GROUP_ID}
         PHP_SOCKET_DIR: ${PHP_SOCKET_DIR}
         PHP_SOCKET_FILE: ${PHP_SOCKET_FILE}
-    container_name: "${APP_NAME}_nginx"
+    container_name: "${DOMAIN}"
     restart: always
     volumes:
       - socket:${PHP_SOCKET_DIR}
