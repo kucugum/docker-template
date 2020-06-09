@@ -16,7 +16,12 @@ services:
     container_name: "${APP_NAME}_php"
     restart: always
     volumes:
-      - ./app:${APP_CODE_DIR}
+      - ./app:${APP_CODE_DIR}:rw,cached
+      # Symfony fast volumes
+      - ./app/var/
+      - ./app/var/cache/
+      - ./app/var/logs/
+      - ./app/var/sessions/
       - socket:${PHP_SOCKET_DIR}
       - ./docker/php/custom.ini:/usr/local/etc/php/conf.d/custom.ini:cached
     labels:
@@ -42,7 +47,7 @@ services:
     restart: always
     volumes:
       - socket:${PHP_SOCKET_DIR}
-      - ./app:${APP_CODE_DIR}:delegated
+      - ./app/web:${APP_CODE_DIR}/web:ro
       - ./data/logs/:/var/log/nginx
       - ./docker/nginx/ssl/${DOMAIN}.crt:/etc/nginx/ssl/${DOMAIN}.crt
       - ./docker/nginx/ssl/${DOMAIN}.key:/etc/nginx/ssl/${DOMAIN}.key
