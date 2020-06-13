@@ -23,6 +23,7 @@ Make commands
 - make down (docker-compose down)
 - make restart (docker-compose stop && docker-compose build up -d)
 - make ssl-start (Ssl certificate add trustRoot and make restart)
+- make ssl-start-mac (For macos Ssl certificate add trustRoot and make restart)
 - make ssl-refresh (Delete old ssl certificate and ssl-start command)
 - make clear (bash clear)
 - make php (docker-compose exec php bash)
